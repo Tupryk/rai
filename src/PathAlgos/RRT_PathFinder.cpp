@@ -7,6 +7,7 @@
     --------------------------------------------------------------  */
 
 #include "RRT_PathFinder.h"
+#include "RRT_utils.h"
 
 #include "../Gui/opengl.h"
 #include "../Kin/viewer.h"
@@ -18,46 +19,6 @@
 #endif
 
 namespace rai {
-
-double corput(uint n, uint base) {
-  double q = 0.;
-  double bk = 1./double(base);
-
-  while(n > 0) {
-    q += (n % base)*bk;
-    n /= base;
-    bk /= double(base);
-  }
-  return q;
-}
-
-bool checkConnection(ConfigurationProblem& P,
-                     const arr& start,
-                     const arr& end,
-                     const uint num,
-                     const bool binary) {
-  if(binary) {
-    for(uint i=1; i<num; ++i) {
-      double ind = corput(i, 2);
-      arr p = start + ind * (end-start);
-
-      // TODO: change to check feasibility properly (with path constraints)
-      if(!P.query(p)->isFeasible) {
-        return false;
-      }
-    }
-  } else {
-    for(uint i=1; i<num-1; ++i) {
-      arr p = start + 1.0 * i / (num-1) * (end-start);
-
-      // TODO: change to check feasibility properly (with path constraints)
-      if(!P.query(p)->isFeasible) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
 
 //===========================================================================
 
@@ -146,22 +107,6 @@ bool RRT_PathFinder::growTreeTowardsRandom(RRT_SingleTree& rrt) {
   return false;
 }
 
-void normalizeSphericalCoordinates(arr& x, const uintA& idx){
-  arr xsub = x({idx(0), idx(0)+idx(1)-1+1});
-  op_normalize(xsub);
-}
-
-void randomSphericalCoordinates(arr& x, const uintA& idx){
-  arr xsub = x({idx(0), idx(0)+idx(1)-1+1});
-  xsub = randn(xsub.N);
-  op_normalize(xsub);
-}
-
-void flipSphericalCoordinates(arr& x, const uintA& idx){
-  arr xsub = x({idx(0), idx(0)+idx(1)-1+1});
-  xsub *= -1.;
-}
-
 bool RRT_PathFinder::growTreeToTree(RRT_SingleTree& rrt_A, RRT_SingleTree& rrt_B) {
   //decide on a target: forward or random
   arr t;
@@ -171,7 +116,7 @@ bool RRT_PathFinder::growTreeToTree(RRT_SingleTree& rrt_A, RRT_SingleTree& rrt_B
     t.resize(rrt_A.getNode(0).N);
     for(uint i=0; i<t.N; i++) {
       double lo=P->limits(0, i), up=P->limits(1, i);
-      CHECK_GE(up-lo, 1e-3, "limits are null interval: " <<i <<' ' <<P->C->getJointNames());
+      CHECK_GE(up-lo, 1e-3, "limits are null interval: " <<i <<' ' <<P->C.getJointNames());
       t.elem(i) = lo + rnd.uni()*(up-lo);
     }
     for(uint i=0;i<P->sphericalCoordinates.d0;i++) randomSphericalCoordinates(t, P->sphericalCoordinates[i]);
@@ -221,7 +166,7 @@ bool RRT_PathFinder::growTreeToTree(RRT_SingleTree& rrt_A, RRT_SingleTree& rrt_B
 //===========================================================================
 
 
-void RRT_PathFinder::setProblem(shared_ptr<Configuration> C){
+void RRT_PathFinder::setProblem(Configuration& C){
   P = make_shared<ConfigurationProblem>(C, opt.useBroadCollisions, opt.collisionTolerance, 1);
   P->verbose=0;
 }
@@ -372,16 +317,6 @@ shared_ptr<SolverReturn> RRT_PathFinder::solve() {
   return ret;
 }
 
-void revertPath(arr& path) {
-  uint N = path.d0;
-  arr x;
-  for(uint i=0; i<N/2; i++) {
-    x = path[i];
-    path[i] = path[N-1-i];
-    path[N-1-i] = x;
-  }
-}
-
 void RRT_PathFinder::view(bool pause, const char* txt, bool play){
 #if 0
   ensure_DISP();
@@ -390,15 +325,15 @@ void RRT_PathFinder::view(bool pause, const char* txt, bool play){
   // if(play) DISP.get_viewer() -> playVideo();
   DISP.get_viewer() -> view(pause, txt);
 #else
-  P->C->get_viewer() -> updateConfiguration(*P->C);
-  if(path.N) P->C->get_viewer() -> setMotion(*P->C, path);
-  P->C->get_viewer() -> view(pause, txt);
+  P->C.get_viewer() -> updateConfiguration(P->C);
+  if(path.N) P->C.get_viewer() -> setMotion(P->C, path);
+  P->C.get_viewer() -> view(pause, txt);
 #endif
 }
 
 void RRT_PathFinder::ensure_DISP(){
-  if(DISP.getJointStateDimension() != P->C->getJointStateDimension()){
-    DISP.copy(*P->C);
+  if(DISP.getJointStateDimension() != P->C.getJointStateDimension()){
+    DISP.copy(P->C);
   }
 }
 

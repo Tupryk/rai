@@ -58,7 +58,7 @@ struct RRT_PathFinder_Options {
   RAI_PARAM("rrt/", int, maxIters, 5000)
   RAI_PARAM("rrt/", double, p_connect, .5)
   RAI_PARAM("rrt/", double, collisionTolerance, 1e-4)
-  RAI_PARAM("rrt/", bool, useBroadCollisions, true)
+  RAI_PARAM("rrt/", bool, useBroadCollisions, false)
 };
 
 ///algorithms
@@ -78,7 +78,7 @@ struct RRT_PathFinder : NonCopyable {
   arr path;
 
   //setup
-  void setProblem(shared_ptr<Configuration> C);
+  void setProblem(Configuration& C);
   void setStartGoal(const arr& _starts, const arr& _goals);
   void setExplicitCollisionPairs(const StringA& collisionPairs);
 
@@ -100,11 +100,9 @@ private:
   bool growTreeTowardsRandom(RRT_SingleTree& rrt);
   bool growTreeToTree(RRT_SingleTree& rrt_A, RRT_SingleTree& rrt_B);
   rai::Configuration DISP;
-   void ensure_DISP();
+  void ensure_DISP();
 };
 
 //===========================================================================
-
-void revertPath(arr& path);
 
 } //namespace
