@@ -25,10 +25,13 @@ bool RndStableConfigs::getSample(rai::Configuration& C, const StringA& supports)
   if(opt.verbose>0) komo.set_viewer(C.get_viewer());
 
   //-- discrete decisions:
-  str supp="supports:";
+  str supp="Supports (prob ";
+  supp << opt.prob_contact << "):";
+  contact_mode_count = 0;
   for(const str& thing:supports){
-    if(rnd.uni()<.5){
+    if(rnd.uni() < opt.prob_contact){
       supp <<' ' <<thing;
+      contact_mode_count++;
       // komo.addContact_stick(0.,-1., "obj", thing, opt.frictionCone_mu);
       komo.addContact_WithPoaFrame(1., "obj", thing, opt.frictionCone_mu, .05);
     }
@@ -65,11 +68,12 @@ bool RndStableConfigs::getSample(rai::Configuration& C, const StringA& supports)
     }else{
       totalSucc ++;
       totalEvals += ret->evals;
+      last_sampled_joint_state = komo.getPath();
+      forces_report = komo.pathConfig.reportForces();
       if(opt.verbose>0) komo.view(opt.verbose>1, STRING(supp <<"\n" <<*ret));
       if(savePngs){
         C.get_viewer()->savePng();
       }
-      C.setJointState(komo.getPath_qOrg()[0]);
       return true;
     }
   }
