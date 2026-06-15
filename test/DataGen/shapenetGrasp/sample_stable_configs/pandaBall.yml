@@ -1,0 +1,15 @@
+Include: <../../../../rai-robotModels/panda/panda.g>
+
+Edit panda_base: { X: [-.34, .4, .15] }
+Edit panda_finger_joint1: { q: .0, joint: none }
+Edit panda_finger_joint2: { q: .0, joint: none }
+
+table: { X: [0, 0, .1], shape: box, size: [1, 1, .1], color: [.6], contact: 1 }
+wall(table): { Q: [.45, 0, .3], shape: box, size: [.1, 1, .5], color: [.6], contact: 1 }
+box(table): { Q: [-.05, -.35, .25], shape: box, size: [.9, .3, .4], color: [.6], contact: 1 }
+
+obj_base: {}
+obj(obj_base): { joint: trans3, limits: [-.5,-.5,.0,.5,.5,1.], Q: [0, 0, .3], shape: sphere, size: [.1], color: [1., .5, .0], mass: .2, sampleUniform: 1., contact: 1 }
+
+camera_init: { X: [-0.285441, 1.5997, 0.7643, 0.0515525, -0.0659452, 0.785069, -0.613726], focalLength: 1. }
+

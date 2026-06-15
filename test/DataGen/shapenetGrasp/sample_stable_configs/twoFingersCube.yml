@@ -1,0 +1,24 @@
+Prefix: "l_"
+Include: <ballFinger.yml>
+Prefix: "r_"
+Include: <ballFinger.yml>
+Prefix: false
+
+Edit l_joint1: { q: .1 }
+Edit r_joint1: { q: -.1 }
+
+table: { X: [0, 0, .1], shape: box, size: [1, 1, .1], color: [.6], contact: 1 }
+wall(table): { Q: [.45, 0, .3], shape: box, size: [.1, 1, .5], color: [.6], contact: 1 }
+box(table): { Q: [-.05, -.35, .25], shape: box, size: [.9, .3, .4], color: [.6], contact: 1 }
+
+obj_base: {}
+obj(obj_base): { joint: free, limits: [-.5,-.5,.0,-1.1,-1.1,-1.1,-1.1,.5,.5,1.,1.1,1.1,1.1,1.1], Q: [0, 0, .3], shape: box, size: [.1, .1, .1], color: [1., .5, .0], mass: .2, sampleUniform: 1., contact: 1 }
+side1(obj): { Q: [+.05, .0, .0], shape: box, size: [.001, .1, .1], color: [1., .5, .5], simulation: false }
+side2(obj): { Q: [-.05, .0, .0], shape: box, size: [.001, .1, .1], color: [.8, .3, .3], simulation: false }
+side3(obj): { Q: [.0, +.05, .0], shape: box, size: [.1, .001, .1], color: [.5, 1., .5], simulation: false }
+side4(obj): { Q: [.0, -.05, .0], shape: box, size: [.1, .001, .1], color: [.3, .8, .3], simulation: false }
+side5(obj): { Q: [.0, .0, +.05], shape: box, size: [.1, .1, .001], color: [.5, .5, 1.], simulation: false }
+side6(obj): { Q: [.0, .0, -.05], shape: box, size: [.1, .1, .001], color: [.3, .3, .8], simulation: false }
+
+camera_init: { X: [-0.285441, 1.5997, 0.7643, 0.0515525, -0.0659452, 0.785069, -0.613726], focalLength: 1. }
+
