@@ -48,6 +48,19 @@ struct F_TotalForce : Feature {
   virtual uint dim_phi(const FrameL& C) { return 6; }
 };
 
+struct F_BodyCOM : Feature {
+  F_BodyCOM();
+  virtual void phi2(arr& y, arr& J, const FrameL& F);
+  virtual uint dim_phi(const FrameL& C) { return 3; }
+};
+
+struct F_BodyTotalForce : Feature {
+  double gravity=9.81;
+  F_BodyTotalForce(bool _zeroGravity=false);
+  virtual void phi2(arr& y, arr& J, const FrameL& F);
+  virtual uint dim_phi(const FrameL& C) { return 6; }
+};
+
 //===========================================================================
 // dynamics
 

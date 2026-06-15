@@ -231,7 +231,7 @@ void F_TotalForce::phi2(arr& y, arr& J, const FrameL& F) {
   arr signs;
   FrameL linkF;
   linkF.append(a);
-  a->getRigidSubFrames(linkF, false);
+  a->getSubtree(linkF);
   for(rai::Frame* f:linkF) {
     for(rai::ForceExchangeDof* ex:f->forces) {
       contacts.append(ex);
@@ -242,35 +242,190 @@ void F_TotalForce::phi2(arr& y, arr& J, const FrameL& F) {
   for(uint i=0; i<contacts.N; i++) {
     rai::ForceExchangeDof* con = contacts(i);
     double sign = signs(i);
-
+    
     //get the force
     arr f, Jf;
     con->kinForce(f, Jf);
-
+    
     //get the torque
     arr w, Jw;
     con->kinTorque(w, Jw);
-
+    
     //get the POA
     arr poa, Jpoa;
     con->kinPOA(poa, Jpoa);
-
+    
     //get object center
     arr p, Jp;
     a->C.kinematicsPos(p, Jp, a);
-
+    
     force -= sign * f;
     Jforce -= sign * Jf;
-
+    
     torque += sign * w;
     torque += sign * crossProduct(poa-p, f);
-
+    
     Jtorque += sign * Jw;
     Jtorque += sign * (skew(poa-p) * Jf - skew(f) * (Jpoa-Jp));
   }
-
+  
   y.setBlockVector(force, torque);
   J.setBlockMatrix(Jforce, Jtorque);
+  // std::cout << a->name << " FORCE & TORQUE: " << y << std::endl;
+}
+
+F_BodyCOM::F_BodyCOM() {
+  order=0;
+}
+
+void F_BodyCOM::phi2(arr& y, arr& J, const FrameL& F) {
+  CHECK_EQ(order, 0, "");
+
+  rai::Frame* a = F.scalar();
+
+  arr com, Jcom;
+  a->C.kinematicsZero(com, Jcom, 3);
+
+  FrameL linkF;
+  linkF.append(a);
+  a->getSubtree(linkF);
+  double total_mass = 0.;
+  for(rai::Frame* f:linkF)
+  {
+    if (f->inertia)
+    {
+      // std::cout << f->name << " -> " << f->inertia->mass << std::endl;
+      total_mass += f->inertia->mass;
+    }
+  }
+
+  for(rai::Frame* f:linkF)
+  {
+    if (f->inertia)
+    {
+      arr p, Jp;
+      a->C.kinematicsPos(p, Jp, f);
+
+      com  += f->inertia->mass * p;
+      Jcom += f->inertia->mass * Jp;
+    }
+  }
+  com /= total_mass;
+
+  y = com;
+  J = Jcom;
+  // std::cout << a->name << " COM: " << com << std::endl;
+}
+
+F_BodyTotalForce::F_BodyTotalForce(bool _zeroGravity)
+{
+  order=0;
+  if(_zeroGravity) {
+    gravity = 0.;
+  } else {
+    gravity = rai::getParameter<double>("gravity", 9.81);
+  }
+}
+
+void F_BodyTotalForce::phi2(arr& y, arr& J, const FrameL& F)
+{
+  CHECK_EQ(order, 0, "");
+
+  rai::Frame* a = F.first();
+
+  // Compute Center Of Mass (COM)
+  arr com, Jcom;
+  a->C.kinematicsZero(com, Jcom, 3);
+
+  FrameL linkF;
+  linkF.append(a);
+  a->getSubtree(linkF);
+  double total_mass = 0.;
+  for(rai::Frame* f:linkF)
+  {
+    if (f->inertia)
+    {
+      // std::cout << f->name << " -> " << f->inertia->mass << std::endl;
+      total_mass += f->inertia->mass;
+    }
+  }
+
+  for(rai::Frame* f:linkF)
+  {
+    if (f->inertia)
+    {
+      arr p, Jp;
+      a->C.kinematicsPos(p, Jp, f);
+
+      com  += f->inertia->mass * p;
+      Jcom += f->inertia->mass * Jp;
+    }
+  }
+  com /= total_mass;
+  Jcom /= total_mass;
+
+  // std::cout << "COM: " << com << std::endl;
+  // auto cf = a->C.getFrame("COM", false);
+  // if (!cf)
+  // {
+  //   cf = a->C.addFrame("COM");
+  //   cf->setShape(rai::ST_marker, {0.2});
+  // }
+  // cf->setPosition(com);
+
+  // Compute Total Force
+  arr force, torque, Jforce, Jtorque;
+  a->C.kinematicsZero(force, Jforce, 3);
+  a->C.kinematicsZero(torque, Jtorque, 3);
+
+  if(gravity) { force(2) += gravity * total_mass; }
+  
+  rai::Array<rai::ForceExchangeDof*> contacts;
+  arr signs;
+  for(rai::Frame* f:linkF)
+  {
+    if (f->inertia)
+    {
+      // std::cout << f->name << " Checking forces... " << std::endl;
+      for(rai::ForceExchangeDof* ex:f->forces)
+      {
+        // std::cout << " force -> " << ex << std::endl;
+        contacts.append(ex);
+        signs.append(ex->sign(f));
+      }
+    }
+  }
+
+  for(uint i=0; i<contacts.N; i++)
+  {
+    rai::ForceExchangeDof* con = contacts(i);
+    double sign = signs(i);
+    
+    //get the force
+    arr f, Jf;
+    con->kinForce(f, Jf);
+    
+    //get the torque
+    arr w, Jw;
+    con->kinTorque(w, Jw);
+    
+    //get the POA
+    arr poa, Jpoa;
+    con->kinPOA(poa, Jpoa);
+    
+    force -= sign * f;
+    Jforce -= sign * Jf;
+    
+    torque += sign * w;
+    torque += sign * crossProduct(poa-com, f);
+    
+    Jtorque += sign * Jw;
+    Jtorque += sign * (skew(poa-com) * Jf - skew(f) * (Jpoa-Jcom));
+  }
+  
+  y.setBlockVector(force, torque);
+  J.setBlockMatrix(Jforce, Jtorque);
+  // std::cout << a->name << " Total Body Force: " << y << std::endl;
 }
 
 //===========================================================================
